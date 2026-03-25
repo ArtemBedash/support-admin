@@ -1,9 +1,22 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 
+const heading = Cormorant_Garamond({
+  subsets: ["latin", "cyrillic"],
+  weight: ["600", "700"],
+  variable: "--font-heading",
+});
+
+const sans = Manrope({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
+
 export const metadata: Metadata = {
-  title: "SupportBot — Сообщения",
-  description: "Admin panel for Telegram support messages",
+  title: "New Era AI Support Board",
+  description: "Luxury-style admin panel for Telegram support messages",
 };
 
 export default function RootLayout({
@@ -12,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="ru" className={`${heading.variable} ${sans.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }
