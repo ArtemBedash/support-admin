@@ -198,7 +198,7 @@ export function AdminConsole({ messages, initialError }: Props) {
             New Era AI Support Board
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-[var(--muted)]">
-            Строгая консоль поддержки с просмотром диалогов и семантическим поиском по embeddings.
+           Админ-консоль поддержки с просмотром диалогов и семантическим поиском по эмбеддингам
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
