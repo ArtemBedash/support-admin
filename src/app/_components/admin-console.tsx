@@ -150,6 +150,7 @@ export function AdminConsole({ messages, initialError }: Props) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
+    document.body.dataset.theme = themeMode;
     window.localStorage.setItem("admin_theme_mode", themeMode);
   }, [themeMode]);
 
