@@ -30,7 +30,7 @@ type Conversation = {
 };
 
 type DialogPeriod = "all" | "24h" | "7d" | "30d";
-type ThemeMode = "light" | "dark";
+type ThemeMode = "light" | "dark" | "modern-dark";
 
 function formatCell(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === "") {
@@ -143,7 +143,8 @@ export function AdminConsole({ messages, initialError }: Props) {
   useEffect(() => {
     const saved = window.localStorage.getItem("admin_theme_mode");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const mode: ThemeMode = saved === "dark" || saved === "light" ? saved : prefersDark ? "dark" : "light";
+    const isSavedTheme = saved === "dark" || saved === "light" || saved === "modern-dark";
+    const mode: ThemeMode = isSavedTheme ? saved : prefersDark ? "dark" : "light";
     setThemeMode(mode);
   }, []);
 
@@ -239,6 +240,13 @@ export function AdminConsole({ messages, initialError }: Props) {
               className={`tab-btn ${themeMode === "dark" ? "tab-btn--active" : ""}`}
             >
               Dark
+            </button>
+            <button
+              type="button"
+              onClick={() => setThemeMode("modern-dark")}
+              className={`tab-btn ${themeMode === "modern-dark" ? "tab-btn--active" : ""}`}
+            >
+              Modern Dark
             </button>
           </div>
         </section>

@@ -24,6 +24,18 @@
   --accent-strong: #9f8258;
 }
 
+[data-theme="modern-dark"] {
+  --bg: #080d17;
+  --surface: #121b2c;
+  --panel: #0d1625;
+  --surface-soft: #1a2639;
+  --text: #eaf2ff;
+  --muted: #9db0ce;
+  --line: #2f3f5b;
+  --accent: #45b4ff;
+  --accent-strong: #1e86d3;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -48,6 +60,13 @@ body {
     radial-gradient(1000px 560px at 0% 0%, #3b3125 0%, transparent 68%),
     radial-gradient(1000px 560px at 100% 100%, #332a21 0%, transparent 67%),
     linear-gradient(135deg, #0e0d0b 0%, #17130f 50%, #201a14 100%);
+}
+
+[data-theme="modern-dark"] body {
+  background:
+    radial-gradient(1000px 560px at 10% 0%, rgba(70, 163, 255, 0.2) 0%, transparent 64%),
+    radial-gradient(900px 520px at 100% 100%, rgba(99, 238, 255, 0.18) 0%, transparent 68%),
+    linear-gradient(140deg, #050910 0%, #0c1524 48%, #09101c 100%);
 }
 
 h1,
@@ -80,6 +99,10 @@ h3 {
   opacity: 0.04;
 }
 
+[data-theme="modern-dark"] .admin-shell::before {
+  opacity: 0.05;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -94,6 +117,13 @@ h3 {
   box-shadow:
     0 14px 34px rgba(0, 0, 0, 0.38),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="modern-dark"] .panel {
+  background: linear-gradient(180deg, rgba(16, 27, 44, 0.96) 0%, rgba(10, 19, 33, 0.98) 100%);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .chip {
@@ -133,6 +163,12 @@ h3 {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42);
 }
 
+[data-theme="modern-dark"] .tab-btn--active {
+  background: linear-gradient(180deg, #5bc4ff 0%, #2b92df 100%);
+  color: #04111f;
+  box-shadow: 0 8px 22px rgba(36, 133, 214, 0.48);
+}
+
 .input {
   width: 100%;
   border: 1px solid var(--line);
@@ -155,6 +191,10 @@ h3 {
 
 [data-theme="dark"] .input:focus {
   box-shadow: 0 0 0 3px rgba(197, 165, 117, 0.22);
+}
+
+[data-theme="modern-dark"] .input:focus {
+  box-shadow: 0 0 0 3px rgba(69, 180, 255, 0.3);
 }
 
 .action-btn {
@@ -234,6 +274,10 @@ h3 {
   background: linear-gradient(130deg, #6f552f 0%, #bf9f74 35%, #ecd6b6 50%, #bf9f74 65%, #6f552f 100%);
 }
 
+[data-theme="modern-dark"] .ai-fab {
+  background: linear-gradient(130deg, #1d5e9e 0%, #3ea8f8 35%, #8feaff 50%, #3ea8f8 65%, #1d5e9e 100%);
+}
+
 .ai-fab__core {
   display: inline-flex;
   align-items: center;
@@ -250,6 +294,10 @@ h3 {
 
 [data-theme="dark"] .ai-fab__core {
   background: rgba(9, 7, 5, 0.9);
+}
+
+[data-theme="modern-dark"] .ai-fab__core {
+  background: rgba(3, 12, 22, 0.92);
 }
 
 .ai-chat-panel {
