@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
 import { AdminConsole } from "./_components/admin-console";
 
 type Message = {
@@ -14,6 +14,8 @@ type Message = {
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const supabase = await createClient();
+
   const { data, error } = await supabase
     .from("messages")
     .select("id, telegram_chat_id, username, first_name, last_name, text, created_at")

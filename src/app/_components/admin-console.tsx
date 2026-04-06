@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AiChatWidget } from "./ai-chat-widget";
+import { SignOutButton } from "./sign-out-button";
 
 type Message = {
   id: string;
@@ -33,6 +34,7 @@ type DialogPeriod = "all" | "24h" | "7d" | "30d";
 type ThemeMode = "light" | "dark" | "modern-dark";
 
 function formatCell(value: string | number | null | undefined) {
+  // Приводим пустые значения к явному виду, чтобы в таблице не было "пустых" ячеек.
   if (value === null || value === undefined || value === "") {
     return <span className="font-mono text-[var(--muted)]">NULL</span>;
   }
@@ -44,6 +46,7 @@ function formatDate(value: string) {
 }
 
 function getDisplayName(message: Message) {
+  // Единое отображаемое имя пользователя для списков и карточек.
   const fullName = [message.first_name, message.last_name].filter(Boolean).join(" ").trim();
   if (fullName) return fullName;
   if (message.username) return `@${message.username}`;
@@ -64,6 +67,7 @@ export function AdminConsole({ messages, initialError }: Props) {
   const [results, setResults] = useState<SearchResult[]>([]);
 
   const conversations = useMemo<Conversation[]>(() => {
+    // Группируем входные сообщения по chat_id и собираем "голову" диалога (последнее сообщение).
     const grouped = new Map<number, Message[]>();
     for (const message of messages) {
       const group = grouped.get(message.telegram_chat_id) ?? [];
@@ -88,6 +92,7 @@ export function AdminConsole({ messages, initialError }: Props) {
   }, [messages]);
 
   const filteredConversations = useMemo(() => {
+    // Комбинируем фильтрацию по периоду и текстовый поиск по основным полям диалога.
     const search = dialogQuery.trim().toLowerCase();
     const now = Date.now();
     const periodMs: Record<DialogPeriod, number | null> = {
@@ -122,6 +127,7 @@ export function AdminConsole({ messages, initialError }: Props) {
   }, [conversations, dialogPeriod, dialogQuery]);
 
   useEffect(() => {
+    // Поддерживаем валидно выбранный диалог после изменения фильтров.
     if (!filteredConversations.length) {
       setSelectedChatId(null);
       return;
@@ -141,6 +147,7 @@ export function AdminConsole({ messages, initialError }: Props) {
   );
 
   useEffect(() => {
+    // Инициализируем тему: localStorage имеет приоритет, затем системные настройки.
     const saved = window.localStorage.getItem("admin_theme_mode");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const isSavedTheme = saved === "dark" || saved === "light" || saved === "modern-dark";
@@ -149,6 +156,7 @@ export function AdminConsole({ messages, initialError }: Props) {
   }, []);
 
   useEffect(() => {
+    // Синхронизируем тему в DOM и сохраняем выбор пользователя.
     document.documentElement.dataset.theme = themeMode;
     document.body.dataset.theme = themeMode;
     window.localStorage.setItem("admin_theme_mode", themeMode);
@@ -166,6 +174,7 @@ export function AdminConsole({ messages, initialError }: Props) {
     setSearchError(null);
 
     try {
+      // Семантический поиск выполняется на серверном route handler /api/search.
       const chatId = searchChatId === "all" ? null : Number(searchChatId);
       const res = await fetch("/api/search", {
         method: "POST",
@@ -203,9 +212,12 @@ export function AdminConsole({ messages, initialError }: Props) {
            Админ-консоль поддержки с просмотром диалогов и семантическим поиском по эмбеддингам
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
-            <span className="chip">Сообщений: {messages.length}</span>
-            <span className="chip">Пользователей: {conversations.length}</span>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <div className="flex gap-3">
+              <span className="chip">Сообщений: {messages.length}</span>
+              <span className="chip">Пользователей: {conversations.length}</span>
+            </div>
+            <SignOutButton />
           </div>
         </header>
 
