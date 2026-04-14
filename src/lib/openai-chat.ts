@@ -6,6 +6,7 @@ type ChatMessage = {
 };
 
 export async function createChatAnswer(messages: ChatMessage[]): Promise<string> {
+  // Тонкая обертка над Chat Completions API для централизованной обработки ошибок.
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is missing.");

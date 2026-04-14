@@ -25,6 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // CSS-переменные шрифтов выставляются на уровне html и используются в globals.css.
     <html lang="ru" className={`${heading.variable} ${sans.variable}`}>
       <body>{children}</body>
     </html>

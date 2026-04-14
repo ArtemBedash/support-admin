@@ -35,11 +35,15 @@ export async function middleware(request: NextRequest) {
   );
 
   // Проверяем сессию пользователя.
-  // ВАЖНО: getUser() делает запрос к серверам Supabase для верификации токена.
-  // Не используем getSession() — она не проверяет токен на сервере, небезопасно.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Оборачиваем в try/catch — если токен протух или невалидный, getUser() бросает ошибку.
+  // В таком случае считаем пользователя неавторизованным и редиректим на /login.
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    user = null;
+  }
 
   const { pathname } = request.nextUrl;
 

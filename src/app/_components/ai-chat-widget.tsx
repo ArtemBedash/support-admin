@@ -32,6 +32,7 @@ export function AiChatWidget({ chatOptions, selectedChatId }: Props) {
   ]);
 
   const resolvedScope = useMemo(() => {
+    // "Selected Chat" автоматически откатывается в "all", если чат не выбран.
     if (scope !== "selected") return scope;
     return selectedChatId === null ? "all" : String(selectedChatId);
   }, [scope, selectedChatId]);
@@ -48,6 +49,7 @@ export function AiChatWidget({ chatOptions, selectedChatId }: Props) {
     setError(null);
 
     try {
+      // Передаем короткую историю (до 8 сообщений), чтобы не раздувать контекст запроса.
       const chatId =
         resolvedScope === "all" ? null : Number.isNaN(Number(resolvedScope)) ? null : Number(resolvedScope);
 
