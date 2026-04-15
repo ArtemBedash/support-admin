@@ -30,8 +30,8 @@ export function AdminConsole({ messages, initialError }: Props) {
   // Подписка на новые сообщения через Supabase Realtime.
   useEffect(() => {
     const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(),
       { auth: { persistSession: false } }
     );
 
