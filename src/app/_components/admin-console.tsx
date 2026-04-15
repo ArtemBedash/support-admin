@@ -6,13 +6,16 @@ import { DialogsView } from "./dialogs-view";
 import { SemanticSearchView } from "./semantic-search-view";
 import { SignOutButton } from "./sign-out-button";
 import { useTheme } from "../_hooks/use-theme";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@/lib/supabase";
 import type { Message } from "../_types/message";
 
 type Props = {
   messages: Message[];
   initialError: string | null;
 };
+
+// Один экземпляр клиента на весь модуль — избегаем дублирования GoTrueClient.
+const supabase = createSupabaseClient();
 
 export function AdminConsole({ messages, initialError }: Props) {
   const [activeView, setActiveView] = useState<"dialogs" | "semantic">("dialogs");
@@ -29,12 +32,6 @@ export function AdminConsole({ messages, initialError }: Props) {
   // Когда в таблице messages появляется новая строка — подгружаем её с JOIN и добавляем в стейт.
   // Подписка на новые сообщения через Supabase Realtime.
   useEffect(() => {
-    const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(),
-      { auth: { persistSession: false } }
-    );
-
     const channel = supabase
       .channel("messages:new")
       .on(
