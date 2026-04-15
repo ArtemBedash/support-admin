@@ -14,9 +14,6 @@ type Props = {
   initialError: string | null;
 };
 
-// Один экземпляр клиента на весь модуль — избегаем дублирования GoTrueClient.
-const supabase = createSupabaseClient();
-
 export function AdminConsole({ messages, initialError }: Props) {
   const [activeView, setActiveView] = useState<"dialogs" | "semantic">("dialogs");
 
@@ -32,6 +29,8 @@ export function AdminConsole({ messages, initialError }: Props) {
   // Когда в таблице messages появляется новая строка — подгружаем её с JOIN и добавляем в стейт.
   // Подписка на новые сообщения через Supabase Realtime.
   useEffect(() => {
+    // createBrowserClient из @supabase/ssr — singleton, повторные вызовы возвращают тот же экземпляр.
+    const supabase = createSupabaseClient();
     const channel = supabase
       .channel("messages:new")
       .on(
