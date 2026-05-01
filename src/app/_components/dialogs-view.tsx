@@ -78,6 +78,7 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
     return conversations.filter((conversation) => {
       const periodMatch =
         cutoff === null ||
+        conversation.assignedTo !== null ||
         conversation.messages.some((m) => new Date(m.created_at).getTime() >= cutoff);
 
       if (!periodMatch) return false;

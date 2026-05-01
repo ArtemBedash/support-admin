@@ -38,7 +38,7 @@ export async function POST(req: Request, { params }: Params) {
 
   const { data: message, error: msgError } = await supabase
     .from("messages")
-    .insert({ dialog_id: id, text: trimmedText, role: "admin" })
+    .insert({ dialog_id: id, text: trimmedText, role: staff.role })
     .select("id, text, role, created_at")
     .single();
 

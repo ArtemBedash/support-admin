@@ -80,7 +80,7 @@ export function ConversationMessages({ conversation, currentStaff, assignedToNam
         {conversation.messages.map((message) => {
           const role = message.role ?? "user";
           const isUser = role === "user";
-          const roleLabel = role === "user" ? "Клиент" : role === "bot" ? "Бот" : "Менеджер";
+          const roleLabel = role === "user" ? "User" : role === "bot" ? "Bot" : role === "admin" ? "Admin" : "Manager";
           return (
             <div key={message.id} style={{ display: "flex", justifyContent: isUser ? "flex-start" : "flex-end" }}>
               <div
@@ -91,6 +91,8 @@ export function ConversationMessages({ conversation, currentStaff, assignedToNam
                     ? "var(--surface-soft)"
                     : role === "bot"
                     ? "color-mix(in oklab, #6366f1 12%, var(--surface-soft) 88%)"
+                    : role === "admin"
+                    ? "color-mix(in oklab, #ef4444 12%, var(--surface-soft) 88%)"
                     : "color-mix(in oklab, var(--accent) 15%, var(--surface-soft) 85%)",
                 }}
               >
