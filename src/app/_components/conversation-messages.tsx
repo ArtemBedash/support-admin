@@ -1,6 +1,8 @@
 "use client";
 
+import { FormEvent, useState } from "react";
 import type { Conversation } from "../_types/conversation";
+import type { StaffProfile } from "../_types/staff";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();
@@ -15,12 +17,44 @@ function formatCell(value: string | number | null | undefined) {
 
 type Props = {
   conversation: Conversation | null;
+  currentStaff: StaffProfile;
+  onMessageSent?: (dialogId: string) => void;
 };
 
-// Правая колонка: заголовок выбранного чата + список его сообщений.
-export function ConversationMessages({ conversation }: Props) {
+export function ConversationMessages({ conversation, currentStaff, onMessageSent }: Props) {
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
   if (!conversation) {
     return <div className="p-5 text-sm text-[var(--muted)]">Нет диалогов.</div>;
+  }
+
+  const canReply =
+    currentStaff.role === "admin" ||
+    (currentStaff.role === "manager" && conversation.assignedTo === currentStaff.user_id);
+
+  async function handleReply(e: FormEvent) {
+    e.preventDefault();
+    if (!replyText.trim() || !conversation) return;
+
+    setSending(true);
+    setSendError(null);
+    try {
+      const res = await fetch(`/api/dialogs/${conversation.dialogId}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: replyText.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setSendError(json.error); return; }
+      setReplyText("");
+      onMessageSent?.(conversation.dialogId);
+    } catch {
+      setSendError("Не удалось отправить сообщение.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -36,7 +70,7 @@ export function ConversationMessages({ conversation }: Props) {
         {formatCell(conversation.head.dialog.profile.username)}
       </div>
 
-      <div className="max-h-[72vh] space-y-2 overflow-auto p-3 sm:p-4">
+      <div className="max-h-[60vh] space-y-2 overflow-auto p-3 sm:p-4">
         {conversation.messages.map((message) => {
           const isUser = (message.role ?? "user") === "user";
           return (
@@ -59,6 +93,32 @@ export function ConversationMessages({ conversation }: Props) {
           );
         })}
       </div>
+
+      {canReply && (
+        <form
+          onSubmit={handleReply}
+          className="border-t border-[var(--line)] p-3 sm:p-4"
+        >
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="input flex-1 text-sm"
+              placeholder="Ответить клиенту в Telegram..."
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              disabled={sending}
+            />
+            <button
+              type="submit"
+              disabled={sending || !replyText.trim()}
+              className="action-btn shrink-0 text-sm"
+            >
+              {sending ? "..." : "Отправить"}
+            </button>
+          </div>
+          {sendError && <p className="mt-2 text-xs text-red-700">{sendError}</p>}
+        </form>
+      )}
     </>
   );
 }

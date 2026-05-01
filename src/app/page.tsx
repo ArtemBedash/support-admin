@@ -1,27 +1,24 @@
-/**
- * page.tsx — главная SSR страница админки (Server Component).
- *
- * Флоу:
- *   1. Создаём Supabase клиент с сессией текущего менеджера (cookie-based auth).
- *   2. Грузим последние 300 сообщений с JOIN на dialogs и profiles.
- *   3. Передаём данные в AdminConsole (Client Component) через props.
- *
- * Почему SSR: данные грузятся на сервере до отправки HTML в браузер —
- * менеджер сразу видит диалоги без лишнего loading state.
- */
-
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { getCurrentStaff } from "@/lib/staff";
 import { AdminConsole } from "./_components/admin-console";
 import type { Message } from "./_types/message";
 
-// force-dynamic — отключаем кеш Next.js, страница всегда рендерится свежей.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const staff = await getCurrentStaff();
+
+  if (!staff) {
+    redirect("/login?error=no_profile");
+  }
+
+  if (!staff.is_active) {
+    redirect("/login?error=inactive");
+  }
+
   const supabase = await createClient();
 
-  // Один запрос с вложенным JOIN: messages → dialogs → profiles.
-  // Supabase автоматически собирает вложенные объекты по FK связям.
   const { data, error } = await supabase
     .from("messages")
     .select(`
@@ -43,8 +40,13 @@ export default async function Home() {
     .order("created_at", { ascending: false })
     .limit(300);
 
-  // as unknown as Message[] — Supabase возвращает generic тип, приводим к нашему.
-const messages = (data ?? []) as unknown as Message[];
+  const messages = (data ?? []) as unknown as Message[];
 
-  return <AdminConsole messages={messages} initialError={error?.message ?? null} />;
+  return (
+    <AdminConsole
+      messages={messages}
+      initialError={error?.message ?? null}
+      currentStaff={staff}
+    />
+  );
 }

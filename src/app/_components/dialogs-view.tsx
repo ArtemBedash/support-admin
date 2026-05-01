@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase";
 import type { Message } from "../_types/message";
 import type { Conversation } from "../_types/conversation";
+import type { StaffProfile } from "../_types/staff";
 import { ConversationList } from "./conversation-list";
 import { ConversationMessages } from "./conversation-messages";
 
@@ -14,6 +14,7 @@ type Props = {
   selectedChatId: number | null;
   onSelectChat: (chatId: number) => void;
   onAssignChange: (dialogId: string, assignedTo: string | null) => void;
+  currentStaff: StaffProfile;
 };
 
 function getDisplayName(message: Message) {
@@ -24,19 +25,10 @@ function getDisplayName(message: Message) {
   return `Chat ${message.dialog.telegram_chat_id}`;
 }
 
-// Оркестратор диалогов: группирует сообщения, фильтрует, управляет назначением.
-export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignChange }: Props) {
+export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignChange, currentStaff }: Props) {
   const [dialogQuery, setDialogQuery] = useState("");
   const [dialogPeriod, setDialogPeriod] = useState<DialogPeriod>("all");
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  // Получаем ID текущего менеджера из Supabase Auth при монтировании.
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setCurrentUserId(data.user?.id ?? null);
-    });
-  }, []);
+  const currentUserId = currentStaff.user_id;
 
   // Группируем сообщения по chatId и берём последнее как "голову" диалога.
   const conversations = useMemo<Conversation[]>(() => {
@@ -69,6 +61,7 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
   // Фильтрация по периоду и текстовому запросу.
   const filteredConversations = useMemo(() => {
     const search = dialogQuery.trim().toLowerCase();
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
     const periodMs: Record<DialogPeriod, number | null> = {
       all: null,
@@ -146,7 +139,10 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
       />
 
       <article className="panel overflow-hidden">
-        <ConversationMessages conversation={selectedConversation} />
+        <ConversationMessages
+          conversation={selectedConversation}
+          currentStaff={currentStaff}
+        />
       </article>
     </section>
   );

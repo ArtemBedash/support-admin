@@ -1,14 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 
 type ThemeMode = "light" | "dark" | "modern-dark";
 
-export default function LoginPage() {
+const AUTH_ERRORS: Record<string, string> = {
+  inactive: "Доступ отключен. Обратитесь к администратору.",
+  no_profile: "Профиль сотрудника не найден. Обратитесь к администратору за приглашением.",
+};
+
+function LoginFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +22,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Берем тему из localStorage; если не задано, используем системную.
+    const errorCode = searchParams.get("error");
+    if (errorCode && AUTH_ERRORS[errorCode]) {
+      setError(AUTH_ERRORS[errorCode]);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const saved = window.localStorage.getItem("admin_theme_mode");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const isSavedTheme = saved === "dark" || saved === "light" || saved === "modern-dark";
@@ -25,7 +37,6 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    // Синхронизируем тему страницы входа с общей темой админки.
     document.documentElement.dataset.theme = themeMode;
     document.body.dataset.theme = themeMode;
     window.localStorage.setItem("admin_theme_mode", themeMode);
@@ -142,8 +153,23 @@ export default function LoginPage() {
               Восстановление пароля
             </Link>
           </p>
+
+          <p className="mt-3 text-sm text-[var(--muted)]">
+            Есть приглашение?{" "}
+            <Link href="/register" className="font-semibold text-[var(--accent)] hover:underline">
+              Зарегистрироваться
+            </Link>
+          </p>
         </section>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginFormInner />
+    </Suspense>
   );
 }

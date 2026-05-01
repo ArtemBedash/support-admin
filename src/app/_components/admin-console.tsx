@@ -4,32 +4,29 @@ import { useEffect, useMemo, useState } from "react";
 import { AiChatWidget } from "./ai-chat-widget";
 import { DialogsView } from "./dialogs-view";
 import { SemanticSearchView } from "./semantic-search-view";
-import { SignOutButton } from "./sign-out-button";
+import { BotPromptView } from "./bot-prompt-view";
+import { StaffView } from "./staff-view";
+import { Sidebar } from "./sidebar";
 import { useTheme } from "../_hooks/use-theme";
 import { createClient as createSupabaseClient } from "@/lib/supabase";
 import type { Message } from "../_types/message";
+import type { StaffProfile } from "../_types/staff";
+
+type View = "dialogs" | "search" | "bot-prompt" | "staff";
 
 type Props = {
   messages: Message[];
   initialError: string | null;
+  currentStaff: StaffProfile;
 };
 
-export function AdminConsole({ messages, initialError }: Props) {
-  const [activeView, setActiveView] = useState<"dialogs" | "semantic">("dialogs");
-
-  // selectedChatId живёт здесь — нужен и DialogsView и AiChatWidget одновременно.
+export function AdminConsole({ messages, initialError, currentStaff }: Props) {
+  const [activeView, setActiveView] = useState<View>("dialogs");
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
-
-  // liveMessages — начинаем с SSR-данных, пополняем через Realtime.
   const [liveMessages, setLiveMessages] = useState<Message[]>(messages);
-
   const { themeMode, setThemeMode } = useTheme();
 
-  // Подписка на новые сообщения через Supabase Realtime.
-  // Когда в таблице messages появляется новая строка — подгружаем её с JOIN и добавляем в стейт.
-  // Подписка на новые сообщения через Supabase Realtime.
   useEffect(() => {
-    // createBrowserClient из @supabase/ssr — singleton, повторные вызовы возвращают тот же экземпляр.
     const supabase = createSupabaseClient();
     const channel = supabase
       .channel("messages:new")
@@ -56,8 +53,6 @@ export function AdminConsole({ messages, initialError }: Props) {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Прямое обновление assigned_to после назначения менеджера.
-  // Не нужен router.refresh() — меняем стейт напрямую.
   function handleAssignChange(dialogId: string, assignedTo: string | null) {
     setLiveMessages((prev) =>
       prev.map((m) =>
@@ -68,7 +63,6 @@ export function AdminConsole({ messages, initialError }: Props) {
     );
   }
 
-  // chatOptions — уникальный список чатов для дропдаунов.
   const chatOptions = useMemo(() => {
     const seen = new Map<number, string>();
     for (const message of liveMessages) {
@@ -88,78 +82,79 @@ export function AdminConsole({ messages, initialError }: Props) {
   }, [liveMessages]);
 
   return (
-    <main className="admin-shell min-h-screen px-4 py-8 sm:px-8">
-      <div className="mx-auto w-full max-w-7xl">
-        <header className="panel mb-6 p-6 sm:p-8">
-          <p className="text-xs tracking-[0.22em] text-[var(--muted)] uppercase">Support Admin</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-            New Era AI Support Board
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm text-[var(--muted)]">
-            Админ-консоль поддержки с просмотром диалогов и семантическим поиском по эмбеддингам
-          </p>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-            <div className="flex gap-3">
-              <span className="chip">Сообщений: {liveMessages.length}</span>
-              <span className="chip">Диалогов: {chatOptions.length}</span>
-            </div>
-            <SignOutButton />
+    <div className="admin-shell min-h-screen">
+      <div className="flex min-h-screen">
+        <Sidebar
+          currentStaff={currentStaff}
+          activeView={activeView}
+          onNavigate={setActiveView}
+        />
+
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 overflow-auto">
+          <div className="mx-auto w-full max-w-7xl">
+            {/* Шапка */}
+            <header className="panel mb-5 p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs tracking-[0.22em] text-[var(--muted)] uppercase">Support Admin</p>
+                  <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+                    New Era AI Support Board
+                  </h1>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex gap-1.5 flex-wrap">
+                    <span className="chip text-xs">Сообщений: {liveMessages.length}</span>
+                    <span className="chip text-xs">Диалогов: {chatOptions.length}</span>
+                  </div>
+                  {/* Theme switcher */}
+                  <div className="flex w-fit gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1">
+                    {(["light", "dark", "modern-dark"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setThemeMode(mode)}
+                        className={`tab-btn text-xs px-2.5 py-1 ${themeMode === mode ? "tab-btn--active" : ""}`}
+                      >
+                        {mode === "light" ? "L" : mode === "dark" ? "D" : "MD"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            {initialError && (
+              <div className="panel mb-5 border-red-400/40 bg-red-200/30 p-4 text-sm text-red-900">
+                {initialError}
+              </div>
+            )}
+
+            {activeView === "dialogs" && (
+              <DialogsView
+                messages={liveMessages}
+                selectedChatId={selectedChatId}
+                onSelectChat={setSelectedChatId}
+                onAssignChange={handleAssignChange}
+                currentStaff={currentStaff}
+              />
+            )}
+
+            {activeView === "search" && (
+              <SemanticSearchView chatOptions={chatOptions} />
+            )}
+
+            {activeView === "bot-prompt" && currentStaff.role === "admin" && (
+              <BotPromptView />
+            )}
+
+            {activeView === "staff" && currentStaff.role === "admin" && (
+              <StaffView />
+            )}
           </div>
-        </header>
-
-        <section className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex w-fit gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5">
-            <button
-              type="button"
-              onClick={() => setActiveView("dialogs")}
-              className={`tab-btn ${activeView === "dialogs" ? "tab-btn--active" : ""}`}
-            >
-              Диалоги
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveView("semantic")}
-              className={`tab-btn ${activeView === "semantic" ? "tab-btn--active" : ""}`}
-            >
-              Семантический поиск
-            </button>
-          </div>
-
-          <div className="flex w-fit gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5">
-            {(["light", "dark", "modern-dark"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setThemeMode(mode)}
-                className={`tab-btn ${themeMode === mode ? "tab-btn--active" : ""}`}
-              >
-                {mode === "light" ? "Light" : mode === "dark" ? "Dark" : "Modern Dark"}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {initialError && (
-          <div className="panel mb-6 border-red-400/40 bg-red-200/30 p-4 text-red-900">
-            {initialError}
-          </div>
-        )}
-
-        {activeView === "dialogs" && (
-          <DialogsView
-            messages={liveMessages}
-            selectedChatId={selectedChatId}
-            onSelectChat={setSelectedChatId}
-            onAssignChange={handleAssignChange}
-          />
-        )}
-
-        {activeView === "semantic" && (
-          <SemanticSearchView chatOptions={chatOptions} />
-        )}
+        </main>
       </div>
 
       <AiChatWidget selectedChatId={selectedChatId} chatOptions={chatOptions} />
-    </main>
+    </div>
   );
 }

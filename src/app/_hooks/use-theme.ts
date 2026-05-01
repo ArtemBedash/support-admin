@@ -16,17 +16,15 @@ import { useEffect, useState } from "react";
 
 export type ThemeMode = "light" | "dark" | "modern-dark";
 
-export function useTheme() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+function getInitialTheme(): ThemeMode {
+  if (typeof window === "undefined") return "light";
+  const saved = window.localStorage.getItem("admin_theme_mode");
+  if (saved === "dark" || saved === "light" || saved === "modern-dark") return saved;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
-  // Эффект запускается один раз при монтировании.
-  // Читаем сохранённую тему или определяем по системным настройкам.
-  useEffect(() => {
-    const saved = window.localStorage.getItem("admin_theme_mode");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isValid = saved === "dark" || saved === "light" || saved === "modern-dark";
-    setThemeMode(isValid ? saved : prefersDark ? "dark" : "light");
-  }, []);
+export function useTheme() {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
 
   // Эффект запускается при каждом изменении themeMode.
   // Применяем тему в DOM и сохраняем в localStorage.

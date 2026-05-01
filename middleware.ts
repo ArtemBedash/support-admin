@@ -48,7 +48,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Если пользователь не залогинен и пытается открыть защищённую страницу — на /login.
-  if (!user && pathname !== "/login" && pathname !== "/forgot-password" && pathname !== "/reset-password" && pathname !== "/auth/confirm") {
+  const publicPaths = ["/login", "/forgot-password", "/reset-password", "/auth/confirm", "/register"];
+  if (!user && !publicPaths.includes(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
