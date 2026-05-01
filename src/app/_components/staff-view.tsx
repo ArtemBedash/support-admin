@@ -383,7 +383,7 @@ export function StaffView() {
           </label>
           <button
             type="button"
-            onClick={createInvite}
+            onClick={() => createInvite()}
             disabled={creatingInvite}
             className="action-btn"
           >
