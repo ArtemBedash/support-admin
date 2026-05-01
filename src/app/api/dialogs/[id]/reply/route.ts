@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceRoleClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { getCurrentStaff } from "@/lib/staff";
 
 type Params = { params: Promise<{ id: string }> };
@@ -18,9 +18,7 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   const supabase = await createClient();
-  const serviceClient = createServiceRoleClient();
 
-  // Проверяем что диалог существует и берём telegram_chat_id
   const { data: dialog } = await supabase
     .from("dialogs")
     .select("id, telegram_chat_id, assigned_to")
@@ -31,7 +29,6 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Диалог не найден." }, { status: 404 });
   }
 
-  // Manager может отвечать только в своём диалоге
   if (staff.role === "manager" && dialog.assigned_to !== staff.user_id) {
     return NextResponse.json({ error: "Можно отвечать только в своём диалоге." }, { status: 403 });
   }
@@ -39,7 +36,6 @@ export async function POST(req: Request, { params }: Params) {
   const trimmedText = text.trim();
   const now = new Date().toISOString();
 
-  // Сохраняем сообщение сотрудника в БД
   const { data: message, error: msgError } = await supabase
     .from("messages")
     .insert({ dialog_id: id, text: trimmedText, role: "admin" })
@@ -50,24 +46,30 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: msgError.message }, { status: 500 });
   }
 
-  // Обновляем last_staff_reply_at
-  await serviceClient
+  await supabase
     .from("dialogs")
     .update({ last_staff_reply_at: now })
     .eq("id", id);
 
-  // Отправляем в Telegram
   const botToken = process.env.BOT_TOKEN;
-  if (botToken) {
-    try {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: dialog.telegram_chat_id, text: trimmedText }),
-      });
-    } catch (err) {
-      console.error("Telegram send failed:", err);
+  if (!botToken) {
+    return NextResponse.json({ error: "BOT_TOKEN не настроен на сервере." }, { status: 500 });
+  }
+
+  try {
+    const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: dialog.telegram_chat_id, text: trimmedText }),
+    });
+    const tgJson = await tgRes.json();
+    if (!tgRes.ok) {
+      console.error("Telegram error:", tgJson);
+      return NextResponse.json({ error: `Telegram: ${tgJson.description ?? "unknown error"}` }, { status: 500 });
     }
+  } catch (err) {
+    console.error("Telegram send failed:", err);
+    return NextResponse.json({ error: "Не удалось подключиться к Telegram." }, { status: 500 });
   }
 
   return NextResponse.json({ message });

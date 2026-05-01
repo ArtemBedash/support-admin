@@ -5,6 +5,7 @@ import { AiChatWidget } from "./ai-chat-widget";
 import { DialogsView } from "./dialogs-view";
 import { SemanticSearchView } from "./semantic-search-view";
 import { BotPromptView } from "./bot-prompt-view";
+import { KnowledgeBaseView } from "./knowledge-base-view";
 import { StaffView } from "./staff-view";
 import { Sidebar } from "./sidebar";
 import { useTheme } from "../_hooks/use-theme";
@@ -12,15 +13,18 @@ import { createClient as createSupabaseClient } from "@/lib/supabase";
 import type { Message } from "../_types/message";
 import type { StaffProfile } from "../_types/staff";
 
-type View = "dialogs" | "search" | "bot-prompt" | "staff";
+type View = "dialogs" | "search" | "bot-prompt" | "knowledge-base" | "staff";
+
+type StaffOption = { user_id: string; display_name: string; role: "admin" | "manager" };
 
 type Props = {
   messages: Message[];
   initialError: string | null;
   currentStaff: StaffProfile;
+  staffList: StaffOption[];
 };
 
-export function AdminConsole({ messages, initialError, currentStaff }: Props) {
+export function AdminConsole({ messages, initialError, currentStaff, staffList }: Props) {
   const [activeView, setActiveView] = useState<View>("dialogs");
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [liveMessages, setLiveMessages] = useState<Message[]>(messages);
@@ -136,6 +140,7 @@ export function AdminConsole({ messages, initialError, currentStaff }: Props) {
                 onSelectChat={setSelectedChatId}
                 onAssignChange={handleAssignChange}
                 currentStaff={currentStaff}
+                staffList={staffList}
               />
             )}
 
@@ -145,6 +150,10 @@ export function AdminConsole({ messages, initialError, currentStaff }: Props) {
 
             {activeView === "bot-prompt" && currentStaff.role === "admin" && (
               <BotPromptView />
+            )}
+
+            {activeView === "knowledge-base" && currentStaff.role === "admin" && (
+              <KnowledgeBaseView />
             )}
 
             {activeView === "staff" && currentStaff.role === "admin" && (

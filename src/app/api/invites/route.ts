@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
-import { createServiceRoleClient } from "@/lib/supabase-server";
+import { createClient } from "@/lib/supabase-server";
 import { getCurrentStaff } from "@/lib/staff";
 
 function generateCode(): string {
@@ -27,7 +27,7 @@ export async function GET() {
   if (!staff || !staff.is_active) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (staff.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const supabase = createServiceRoleClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("staff_invites")
@@ -36,7 +36,6 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Резолвим display names для created_by и used_by
   const userIds = new Set<string>();
   for (const inv of data ?? []) {
     if (inv.created_by) userIds.add(inv.created_by);
@@ -49,9 +48,7 @@ export async function GET() {
       .from("staff_profiles")
       .select("user_id, display_name")
       .in("user_id", Array.from(userIds));
-    for (const p of profiles ?? []) {
-      nameMap.set(p.user_id, p.display_name);
-    }
+    for (const p of profiles ?? []) nameMap.set(p.user_id, p.display_name);
   }
 
   const invites = (data ?? []).map((inv) => ({
@@ -79,20 +76,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Неверная роль." }, { status: 400 });
   }
 
-  const supabase = createServiceRoleClient();
-
+  const supabase = await createClient();
   const plainCode = generateCode();
   const codeHash = hashCode(plainCode);
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
   const { data, error } = await supabase
     .from("staff_invites")
-    .insert({
-      code_hash: codeHash,
-      role,
-      expires_at: expiresAt,
-      created_by: staff.user_id,
-    })
+    .insert({ code_hash: codeHash, role, expires_at: expiresAt, created_by: staff.user_id })
     .select("id")
     .single();
 

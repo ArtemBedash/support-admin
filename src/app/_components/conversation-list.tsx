@@ -2,33 +2,38 @@
 
 import { AssignButton } from "./assign-button";
 import type { Conversation } from "../_types/conversation";
+import type { StaffProfile, StaffRole } from "../_types/staff";
 
 type DialogPeriod = "all" | "24h" | "7d" | "30d";
+type StaffOption = { user_id: string; display_name: string; role: StaffRole };
 
 type Props = {
   conversations: Conversation[];
   selectedChatId: number | null;
-  currentUserId: string | null;
+  currentStaff: StaffProfile;
+  staffList: StaffOption[];
+  staffMap: Map<string, string>;
   dialogQuery: string;
   dialogPeriod: DialogPeriod;
   onSelectChat: (chatId: number) => void;
   onQueryChange: (query: string) => void;
   onPeriodChange: (period: DialogPeriod) => void;
-  onAssign: (dialogId: string) => void;
+  onAssignTo: (dialogId: string, userId: string) => void;
   onUnassign: (dialogId: string) => void;
 };
 
-// Левая колонка: поиск, фильтры по периоду, список диалогов.
 export function ConversationList({
   conversations,
   selectedChatId,
-  currentUserId,
+  currentStaff,
+  staffList,
+  staffMap,
   dialogQuery,
   dialogPeriod,
   onSelectChat,
   onQueryChange,
   onPeriodChange,
-  onAssign,
+  onAssignTo,
   onUnassign,
 }: Props) {
   return (
@@ -83,8 +88,10 @@ export function ConversationList({
             </p>
             <AssignButton
               assignedTo={conversation.assignedTo}
-              currentUserId={currentUserId}
-              onAssign={() => onAssign(conversation.dialogId)}
+              assignedToName={conversation.assignedTo ? (staffMap.get(conversation.assignedTo) ?? null) : null}
+              currentStaff={currentStaff}
+              staffList={staffList}
+              onAssignTo={(userId) => onAssignTo(conversation.dialogId, userId)}
               onUnassign={() => onUnassign(conversation.dialogId)}
             />
           </div>

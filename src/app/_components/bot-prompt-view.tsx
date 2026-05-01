@@ -113,7 +113,7 @@ export function BotPromptView() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-[var(--muted)]">System prompt</span>
+            <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-[var(--muted)]">RAG system prompt</span>
             <p className="mb-2 text-xs text-[var(--muted)]">Используется когда найден контекст в базе знаний (RAG режим).</p>
             <textarea
               className="input min-h-40 resize-y font-mono text-xs leading-relaxed"

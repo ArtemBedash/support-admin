@@ -83,6 +83,24 @@ export function StaffView() {
     await loadAll();
   }
 
+  async function regenerateInvite(id: string, role: StaffRole) {
+    await fetch(`/api/invites/${id}`, { method: "DELETE" });
+    setCreatingInvite(true);
+    setNewInvite(null);
+    try {
+      const res = await fetch("/api/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const json = await res.json();
+      if (res.ok) setNewInvite(json);
+      await loadAll();
+    } finally {
+      setCreatingInvite(false);
+    }
+  }
+
   function startEdit(s: StaffEntry) {
     setEditingId(s.user_id);
     setEditName(s.display_name);
@@ -328,13 +346,22 @@ export function StaffView() {
                     </td>
                     <td className="py-3">
                       {inv.status === "active" && (
-                        <button
-                          type="button"
-                          onClick={() => revokeInvite(inv.id)}
-                          className="text-xs text-red-600 hover:underline"
-                        >
-                          Отозвать
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => revokeInvite(inv.id)}
+                            className="text-xs text-red-600 hover:underline"
+                          >
+                            Отозвать
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => regenerateInvite(inv.id, inv.role)}
+                            className="text-xs text-[var(--accent)] hover:underline"
+                          >
+                            Обновить
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

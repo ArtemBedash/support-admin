@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Message } from "../_types/message";
 import type { Conversation } from "../_types/conversation";
-import type { StaffProfile } from "../_types/staff";
+import type { StaffProfile, StaffRole } from "../_types/staff";
 import { ConversationList } from "./conversation-list";
 import { ConversationMessages } from "./conversation-messages";
 
 type DialogPeriod = "all" | "24h" | "7d" | "30d";
+type StaffOption = { user_id: string; display_name: string; role: StaffRole };
 
 type Props = {
   messages: Message[];
@@ -15,6 +16,7 @@ type Props = {
   onSelectChat: (chatId: number) => void;
   onAssignChange: (dialogId: string, assignedTo: string | null) => void;
   currentStaff: StaffProfile;
+  staffList: StaffOption[];
 };
 
 function getDisplayName(message: Message) {
@@ -25,12 +27,15 @@ function getDisplayName(message: Message) {
   return `Chat ${message.dialog.telegram_chat_id}`;
 }
 
-export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignChange, currentStaff }: Props) {
+export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignChange, currentStaff, staffList }: Props) {
   const [dialogQuery, setDialogQuery] = useState("");
   const [dialogPeriod, setDialogPeriod] = useState<DialogPeriod>("all");
-  const currentUserId = currentStaff.user_id;
 
-  // Группируем сообщения по chatId и берём последнее как "голову" диалога.
+  const staffMap = useMemo(
+    () => new Map(staffList.map((s) => [s.user_id, s.display_name])),
+    [staffList]
+  );
+
   const conversations = useMemo<Conversation[]>(() => {
     const grouped = new Map<number, Message[]>();
     for (const message of messages) {
@@ -58,7 +63,6 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
       .sort((a, b) => new Date(b.head.created_at).getTime() - new Date(a.head.created_at).getTime());
   }, [messages]);
 
-  // Фильтрация по периоду и текстовому запросу.
   const filteredConversations = useMemo(() => {
     const search = dialogQuery.trim().toLowerCase();
     // eslint-disable-next-line react-hooks/purity
@@ -94,7 +98,6 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
     });
   }, [conversations, dialogPeriod, dialogQuery]);
 
-  // Если выбранный диалог пропал из фильтров — выбираем первый доступный.
   useEffect(() => {
     if (!filteredConversations.length) return;
     if (selectedChatId === null || !filteredConversations.some((c) => c.chatId === selectedChatId)) {
@@ -105,13 +108,13 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
   const selectedConversation =
     filteredConversations.find((c) => c.chatId === selectedChatId) ?? null;
 
-  async function assignToMe(dialogId: string) {
+  async function assignTo(dialogId: string, userId: string) {
     await fetch(`/api/dialogs/${dialogId}/assign`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assigned_to: currentUserId }),
+      body: JSON.stringify({ assigned_to: userId }),
     });
-    onAssignChange(dialogId, currentUserId);
+    onAssignChange(dialogId, userId);
   }
 
   async function unassign(dialogId: string) {
@@ -128,13 +131,15 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
       <ConversationList
         conversations={filteredConversations}
         selectedChatId={selectedChatId}
-        currentUserId={currentUserId}
+        currentStaff={currentStaff}
+        staffList={staffList}
+        staffMap={staffMap}
         dialogQuery={dialogQuery}
         dialogPeriod={dialogPeriod}
         onSelectChat={onSelectChat}
         onQueryChange={setDialogQuery}
         onPeriodChange={setDialogPeriod}
-        onAssign={assignToMe}
+        onAssignTo={assignTo}
         onUnassign={unassign}
       />
 
