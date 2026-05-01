@@ -8,6 +8,10 @@ function hashCode(code: string): string {
   return createHash("sha256").update(code.trim().toUpperCase()).digest("hex");
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 export async function POST(req: Request) {
   try {
     const { email, display_name, password, invite_code } = await req.json();
@@ -27,6 +31,7 @@ export async function POST(req: Request) {
     // Service role нужен здесь осознанно: route создаёт auth user через admin API
     // и пишет staff_profiles/staff_invites независимо от клиентской сессии.
     const supabase = createServiceRoleClient();
+    const normalizedEmail = normalizeEmail(email);
     const codeHash = hashCode(invite_code);
     const now = new Date().toISOString();
 
@@ -34,7 +39,7 @@ export async function POST(req: Request) {
     // быть неиспользованным, неотозванным и не истекшим.
     const { data: invite, error: inviteError } = await supabase
       .from("staff_invites")
-      .select("id, role, expires_at, used_at, revoked_at")
+      .select("id, role, invitee_email, expires_at, used_at, revoked_at")
       .eq("code_hash", codeHash)
       .single();
 
@@ -54,10 +59,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Срок действия приглашения истёк." }, { status: 400 });
     }
 
+    if (invite.invitee_email && normalizeEmail(invite.invitee_email) !== normalizedEmail) {
+      return NextResponse.json(
+        { error: "Этот код приглашения создан для другого email." },
+        { status: 400 }
+      );
+    }
+
     // Создаём пользователя через Supabase Auth admin API.
     // email_confirm=false оставляет стандартный flow подтверждения email.
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       password,
       email_confirm: false,
     });

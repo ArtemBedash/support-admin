@@ -15,6 +15,10 @@ function hashCode(code: string): string {
   return createHash("sha256").update(code.trim().toUpperCase()).digest("hex");
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 // UI не хранит статус отдельной колонкой. Статус вычисляется из lifecycle-полей:
 // used_at, revoked_at и expires_at. Порядок проверок важен.
 function getInviteStatus(invite: {
@@ -39,7 +43,7 @@ export async function GET() {
   // Plain code не выбираем: он никогда не хранится в БД.
   const { data, error } = await supabase
     .from("staff_invites")
-    .select("id, role, expires_at, used_at, revoked_at, created_at, created_by, used_by")
+    .select("id, role, invitee_email, invitee_name, expires_at, used_at, revoked_at, created_at, created_by, used_by")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -67,6 +71,8 @@ export async function GET() {
     id: inv.id,
     role: inv.role,
     status: getInviteStatus(inv),
+    invitee_email: inv.invitee_email ?? null,
+    invitee_name: inv.invitee_name ?? null,
     created_by_name: inv.created_by ? (nameMap.get(inv.created_by) ?? null) : null,
     created_at: inv.created_at,
     expires_at: inv.expires_at,
@@ -86,12 +92,40 @@ export async function POST(req: Request) {
 
   // Роль будущего сотрудника задаётся при создании инвайта.
   // По UI-плану default должен быть manager, но сервер всё равно валидирует.
-  const { role } = await req.json();
+  const { role, invitee_email, invitee_name } = await req.json();
   if (role !== "admin" && role !== "manager") {
     return NextResponse.json({ error: "Неверная роль." }, { status: 400 });
   }
 
+  if (typeof invitee_email !== "string" || !invitee_email.trim()) {
+    return NextResponse.json({ error: "Email приглашённого обязателен." }, { status: 400 });
+  }
+
   const supabase = await createClient();
+  const normalizedInviteeEmail = normalizeEmail(invitee_email);
+  const normalizedInviteeName =
+    typeof invitee_name === "string" && invitee_name.trim() ? invitee_name.trim() : null;
+
+  // На один email может быть только один active invite. Used/revoked/expired
+  // приглашения остаются в истории и не блокируют повторное приглашение.
+  const { data: existingInvites, error: existingError } = await supabase
+    .from("staff_invites")
+    .select("used_at, revoked_at, expires_at")
+    .eq("invitee_email", normalizedInviteeEmail);
+
+  if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 });
+
+  const hasActiveInvite = (existingInvites ?? []).some(
+    (invite) => getInviteStatus(invite) === "active"
+  );
+
+  if (hasActiveInvite) {
+    return NextResponse.json(
+      { error: "Для этого email уже есть активное приглашение." },
+      { status: 400 }
+    );
+  }
+
   const plainCode = generateCode();
   const codeHash = hashCode(plainCode);
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -99,7 +133,14 @@ export async function POST(req: Request) {
   // Создаём одноразовый инвайт на 24 часа. В БД уходит только hash кода.
   const { data, error } = await supabase
     .from("staff_invites")
-    .insert({ code_hash: codeHash, role, expires_at: expiresAt, created_by: staff.user_id })
+    .insert({
+      code_hash: codeHash,
+      role,
+      invitee_email: normalizedInviteeEmail,
+      invitee_name: normalizedInviteeName,
+      expires_at: expiresAt,
+      created_by: staff.user_id,
+    })
     .select("id")
     .single();
 
@@ -107,5 +148,12 @@ export async function POST(req: Request) {
 
   // plain_code возвращается только в этом ответе, чтобы admin мог скопировать
   // ссылку/код и отправить будущему сотруднику.
-  return NextResponse.json({ id: data.id, plain_code: plainCode, role, expires_at: expiresAt });
+  return NextResponse.json({
+    id: data.id,
+    plain_code: plainCode,
+    role,
+    invitee_email: normalizedInviteeEmail,
+    invitee_name: normalizedInviteeName,
+    expires_at: expiresAt,
+  });
 }

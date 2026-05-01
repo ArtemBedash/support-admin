@@ -15,6 +15,8 @@ export type StaffInvite = {
   id: string;
   role: StaffRole;
   status: InviteStatus;
+  invitee_email: string | null;
+  invitee_name: string | null;
   created_by_name: string | null;
   created_at: string;
   expires_at: string;

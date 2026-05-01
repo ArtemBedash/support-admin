@@ -16,6 +16,8 @@ type NewInvite = {
   id: string;
   plain_code: string;
   role: StaffRole;
+  invitee_email: string;
+  invitee_name: string | null;
   expires_at: string;
 };
 
@@ -29,8 +31,12 @@ export function StaffView() {
 
   // Invite creation
   const [newInviteRole, setNewInviteRole] = useState<StaffRole>("manager");
+  const [newInviteEmail, setNewInviteEmail] = useState("");
+  const [newInviteName, setNewInviteName] = useState("");
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [newInvite, setNewInvite] = useState<NewInvite | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [showInviteArchive, setShowInviteArchive] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Staff editing
@@ -40,8 +46,8 @@ export function StaffView() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  async function loadAll() {
-    setLoading(true);
+  async function loadAll(options: { showLoading?: boolean } = {}) {
+    if (options.showLoading) setLoading(true);
     try {
       const [staffRes, invitesRes] = await Promise.all([
         fetch("/api/staff"),
@@ -57,22 +63,42 @@ export function StaffView() {
     }
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll({ showLoading: true }); }, []);
 
-  async function createInvite() {
+  async function createInvite(options?: { role?: StaffRole; email?: string | null; name?: string | null }) {
+    const role = options?.role ?? newInviteRole;
+    const email = options?.email ?? newInviteEmail;
+    const name = options?.name ?? newInviteName;
+
+    if (!email?.trim()) {
+      setInviteError("Email приглашённого обязателен.");
+      return;
+    }
+
     setCreatingInvite(true);
     setNewInvite(null);
+    setInviteError(null);
     try {
       const res = await fetch("/api/invites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newInviteRole }),
+        body: JSON.stringify({
+          role,
+          invitee_email: email.trim(),
+          invitee_name: name?.trim() || null,
+        }),
       });
       const json = await res.json();
       if (res.ok) {
         setNewInvite(json);
+        setNewInviteEmail("");
+        setNewInviteName("");
         await loadAll();
+      } else {
+        setInviteError(json.error ?? "Не удалось создать приглашение.");
       }
+    } catch {
+      setInviteError("Не удалось создать приглашение.");
     } finally {
       setCreatingInvite(false);
     }
@@ -84,21 +110,14 @@ export function StaffView() {
   }
 
   async function regenerateInvite(id: string, role: StaffRole) {
-    await fetch(`/api/invites/${id}`, { method: "DELETE" });
-    setCreatingInvite(true);
-    setNewInvite(null);
-    try {
-      const res = await fetch("/api/invites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-      const json = await res.json();
-      if (res.ok) setNewInvite(json);
-      await loadAll();
-    } finally {
-      setCreatingInvite(false);
+    const invite = invites.find((item) => item.id === id);
+    if (!invite?.invitee_email) {
+      setInviteError("Нельзя обновить старое приглашение без email получателя.");
+      return;
     }
+
+    await fetch(`/api/invites/${id}`, { method: "DELETE" });
+    await createInvite({ role, email: invite.invitee_email, name: invite.invitee_name });
   }
 
   function startEdit(s: StaffEntry) {
@@ -161,6 +180,68 @@ export function StaffView() {
       </span>
     );
   };
+
+  const activeInvites = invites.filter((inv) => inv.status === "active");
+  const archivedInvites = invites.filter((inv) => inv.status !== "active");
+
+  function recipientLabel(invite: StaffInvite) {
+    const email = invite.invitee_email ?? "Unknown recipient";
+    return (
+      <>
+        <span className="font-medium text-[var(--text)]">{invite.invitee_name || email}</span>
+        {invite.invitee_name && (
+          <>
+            <br />
+            <span className="text-xs">{email}</span>
+          </>
+        )}
+      </>
+    );
+  }
+
+  function renderInviteRows(items: StaffInvite[]) {
+    return items.map((inv) => (
+      <tr key={inv.id} className="border-b border-[var(--line)] last:border-0">
+        <td className="py-3 pr-4 text-[var(--muted)]">{recipientLabel(inv)}</td>
+        <td className="py-3 pr-4">{ROLE_LABEL[inv.role]}</td>
+        <td className="py-3 pr-4">{statusBadge(inv.status)}</td>
+        <td className="py-3 pr-4 text-[var(--muted)]">
+          {inv.created_by_name ?? "—"}
+          <br />
+          <span className="text-xs">{new Date(inv.created_at).toLocaleDateString("ru-RU")}</span>
+        </td>
+        <td className="py-3 pr-4 text-[var(--muted)]">
+          {inv.used_by_name ? (
+            <>
+              {inv.used_by_name}
+              <br />
+              <span className="text-xs">{inv.used_at ? new Date(inv.used_at).toLocaleDateString("ru-RU") : ""}</span>
+            </>
+          ) : "—"}
+        </td>
+        <td className="py-3">
+          {inv.status === "active" && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => revokeInvite(inv.id)}
+                className="text-xs text-red-600 hover:underline"
+              >
+                Отозвать
+              </button>
+              <button
+                type="button"
+                onClick={() => regenerateInvite(inv.id, inv.role)}
+                className="text-xs text-[var(--accent)] hover:underline"
+              >
+                Обновить
+              </button>
+            </div>
+          )}
+        </td>
+      </tr>
+    ));
+  }
 
   if (loading) return <div className="panel p-6 text-sm text-[var(--muted)]">Загрузка...</div>;
   if (error) return <div className="panel p-6 text-sm text-red-700">{error}</div>;
@@ -269,6 +350,26 @@ export function StaffView() {
       <section className="panel p-6">
         <h2 className="text-xl font-semibold mb-4">Новое приглашение</h2>
         <div className="flex flex-wrap items-end gap-3">
+          <label className="block min-w-64">
+            <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-[var(--muted)]">Email</span>
+            <input
+              type="email"
+              className="input"
+              placeholder="manager@company.com"
+              value={newInviteEmail}
+              onChange={(e) => setNewInviteEmail(e.target.value)}
+            />
+          </label>
+          <label className="block min-w-56">
+            <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-[var(--muted)]">Имя</span>
+            <input
+              type="text"
+              className="input"
+              placeholder="Иван Иванов"
+              value={newInviteName}
+              onChange={(e) => setNewInviteName(e.target.value)}
+            />
+          </label>
           <label className="block">
             <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-[var(--muted)]">Роль</span>
             <select
@@ -290,8 +391,14 @@ export function StaffView() {
           </button>
         </div>
 
+        {inviteError && <p className="mt-3 text-sm text-red-700">{inviteError}</p>}
+
         {newInvite && (
           <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
+            <p className="text-sm font-medium">{newInvite.invitee_name || newInvite.invitee_email}</p>
+            {newInvite.invitee_name && (
+              <p className="text-xs text-[var(--muted)]">{newInvite.invitee_email}</p>
+            )}
             <p className="text-xs text-[var(--muted)] mb-2">Код показывается только один раз:</p>
             <p className="font-mono text-sm font-bold tracking-wider mb-3">{newInvite.plain_code}</p>
             <button
@@ -310,14 +417,15 @@ export function StaffView() {
 
       {/* Invites list */}
       <section className="panel p-6">
-        <h2 className="text-xl font-semibold mb-4">Приглашения</h2>
-        {invites.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">Нет приглашений.</p>
+        <h2 className="text-xl font-semibold mb-4">Активные приглашения</h2>
+        {activeInvites.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">Нет активных приглашений.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-[0.14em] text-[var(--muted)] border-b border-[var(--line)]">
+                  <th className="pb-3 pr-4">Кому</th>
                   <th className="pb-3 pr-4">Роль</th>
                   <th className="pb-3 pr-4">Статус</th>
                   <th className="pb-3 pr-4">Создан</th>
@@ -326,49 +434,45 @@ export function StaffView() {
                 </tr>
               </thead>
               <tbody>
-                {invites.map((inv) => (
-                  <tr key={inv.id} className="border-b border-[var(--line)] last:border-0">
-                    <td className="py-3 pr-4">{ROLE_LABEL[inv.role]}</td>
-                    <td className="py-3 pr-4">{statusBadge(inv.status)}</td>
-                    <td className="py-3 pr-4 text-[var(--muted)]">
-                      {inv.created_by_name ?? "—"}
-                      <br />
-                      <span className="text-xs">{new Date(inv.created_at).toLocaleDateString("ru-RU")}</span>
-                    </td>
-                    <td className="py-3 pr-4 text-[var(--muted)]">
-                      {inv.used_by_name ? (
-                        <>
-                          {inv.used_by_name}
-                          <br />
-                          <span className="text-xs">{inv.used_at ? new Date(inv.used_at).toLocaleDateString("ru-RU") : ""}</span>
-                        </>
-                      ) : "—"}
-                    </td>
-                    <td className="py-3">
-                      {inv.status === "active" && (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => revokeInvite(inv.id)}
-                            className="text-xs text-red-600 hover:underline"
-                          >
-                            Отозвать
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => regenerateInvite(inv.id, inv.role)}
-                            className="text-xs text-[var(--accent)] hover:underline"
-                          >
-                            Обновить
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {renderInviteRows(activeInvites)}
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      <section className="panel p-6">
+        <button
+          type="button"
+          onClick={() => setShowInviteArchive((value) => !value)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <span className="text-xl font-semibold">Архив приглашений</span>
+          <span className="text-sm text-[var(--muted)]">
+            {archivedInvites.length} · {showInviteArchive ? "Скрыть" : "Показать"}
+          </span>
+        </button>
+
+        {showInviteArchive && (
+          archivedInvites.length === 0 ? (
+            <p className="mt-4 text-sm text-[var(--muted)]">Архив пуст.</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-[0.14em] text-[var(--muted)] border-b border-[var(--line)]">
+                    <th className="pb-3 pr-4">Кому</th>
+                    <th className="pb-3 pr-4">Роль</th>
+                    <th className="pb-3 pr-4">Статус</th>
+                    <th className="pb-3 pr-4">Создан</th>
+                    <th className="pb-3 pr-4">Использован</th>
+                    <th className="pb-3">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>{renderInviteRows(archivedInvites)}</tbody>
+              </table>
+            </div>
+          )
         )}
       </section>
     </div>
