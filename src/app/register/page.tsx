@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
 
 function RegisterForm() {
   const searchParams = useSearchParams();
@@ -45,21 +46,50 @@ function RegisterForm() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/register", {
+      const payload = {
+        email: email.trim(),
+        display_name: displayName.trim(),
+        password,
+        invite_code: inviteCode.trim(),
+      };
+
+      const validateRes = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          display_name: displayName.trim(),
-          password,
-          invite_code: inviteCode.trim(),
-        }),
+        body: JSON.stringify({ ...payload, mode: "validate" }),
       });
 
-      const json = await res.json();
+      const validateJson = await validateRes.json();
 
-      if (!res.ok) {
-        setError(json.error ?? "Ошибка регистрации.");
+      if (!validateRes.ok) {
+        setError(validateJson.error ?? "Ошибка регистрации.");
+        return;
+      }
+
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: payload.email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        },
+      });
+
+      if (signUpError || !data.user) {
+        setError(signUpError?.message ?? "Ошибка создания аккаунта.");
+        return;
+      }
+
+      const completeRes = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, user_id: data.user.id }),
+      });
+
+      const completeJson = await completeRes.json();
+
+      if (!completeRes.ok) {
+        setError(completeJson.error ?? "Ошибка регистрации.");
         return;
       }
 

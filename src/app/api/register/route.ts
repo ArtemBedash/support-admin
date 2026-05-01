@@ -14,7 +14,7 @@ function normalizeEmail(email: string): string {
 
 export async function POST(req: Request) {
   try {
-    const { email, display_name, password, invite_code } = await req.json();
+    const { email, display_name, password, invite_code, user_id, mode } = await req.json();
 
     // Регистрация разрешена только по полному набору данных:
     // identity в Supabase Auth + рабочий профиль сотрудника + invite gate.
@@ -28,8 +28,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Пароль должен быть не менее 8 символов." }, { status: 400 });
     }
 
-    // Service role нужен здесь осознанно: route создаёт auth user через admin API
-    // и пишет staff_profiles/staff_invites независимо от клиентской сессии.
+    // Service role нужен здесь осознанно: route проверяет invite и пишет
+    // staff_profiles/staff_invites независимо от клиентской сессии.
     const supabase = createServiceRoleClient();
     const normalizedEmail = normalizeEmail(email);
     const codeHash = hashCode(invite_code);
@@ -66,19 +66,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Создаём пользователя через Supabase Auth admin API.
-    // email_confirm=false оставляет стандартный flow подтверждения email.
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: normalizedEmail,
-      password,
-      email_confirm: false,
-    });
+    // Первый шаг: frontend проверяет invite до Supabase signUp.
+    // signUp должен выполняться в браузере, чтобы Supabase отправил confirmation email.
+    if (mode === "validate") {
+      return NextResponse.json({ ok: true, role: invite.role });
+    }
 
-    if (authError || !authData.user) {
-      if (authError?.message?.includes("already registered")) {
-        return NextResponse.json({ error: "Этот email уже зарегистрирован." }, { status: 400 });
-      }
-      return NextResponse.json({ error: "Ошибка создания аккаунта." }, { status: 500 });
+    if (typeof user_id !== "string" || !user_id) {
+      return NextResponse.json({ error: "Auth user не найден." }, { status: 400 });
     }
 
     // Создаём рабочий профиль сотрудника. Роль берём только из invite,
@@ -86,16 +81,13 @@ export async function POST(req: Request) {
     const { error: profileError } = await supabase
       .from("staff_profiles")
       .insert({
-        user_id: authData.user.id,
+        user_id,
         display_name: display_name.trim(),
         role: invite.role,
         is_active: true,
       });
 
     if (profileError) {
-      // Компенсационный rollback: если staff_profiles не создался, удаляем
-      // только что созданного Auth user, чтобы не оставлять полурегистрацию.
-      await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json({ error: "Ошибка создания профиля. Попробуйте снова." }, { status: 500 });
     }
 
@@ -103,7 +95,7 @@ export async function POST(req: Request) {
     // used_by связывает invite с созданным auth.users.id для аудита.
     await supabase
       .from("staff_invites")
-      .update({ used_at: now, used_by: authData.user.id })
+      .update({ used_at: now, used_by: user_id })
       .eq("id", invite.id);
 
     // Клиент дальше показывает экран "проверьте email".
