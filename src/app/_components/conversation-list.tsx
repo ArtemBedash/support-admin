@@ -52,10 +52,10 @@ export function ConversationList({
         <div className="flex flex-wrap gap-2">
           {(
             [
+              ["24h", "Активные"],
+              ["7d", "7 дней"],
+              ["30d", "30 дней"],
               ["all", "Все"],
-              ["24h", "24ч"],
-              ["7d", "7д"],
-              ["30d", "30д"],
             ] as const
           ).map(([value, label]) => (
             <button

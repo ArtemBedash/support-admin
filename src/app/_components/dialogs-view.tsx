@@ -29,7 +29,7 @@ function getDisplayName(message: Message) {
 
 export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignChange, currentStaff, staffList }: Props) {
   const [dialogQuery, setDialogQuery] = useState("");
-  const [dialogPeriod, setDialogPeriod] = useState<DialogPeriod>("all");
+  const [dialogPeriod, setDialogPeriod] = useState<DialogPeriod>("24h");
 
   const staffMap = useMemo(
     () => new Map(staffList.map((s) => [s.user_id, s.display_name])),
@@ -55,7 +55,7 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
           chatId,
           dialogId: head.dialog.id,
           assignedTo: head.dialog.assigned_to,
-          messages: sorted,
+          messages: sorted.slice().reverse(), // ascending: oldest first, newest at bottom
           head,
           displayName: getDisplayName(head),
         };
@@ -147,6 +147,11 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
         <ConversationMessages
           conversation={selectedConversation}
           currentStaff={currentStaff}
+          assignedToName={
+            selectedConversation?.assignedTo
+              ? (staffMap.get(selectedConversation.assignedTo) ?? null)
+              : null
+          }
         />
       </article>
     </section>

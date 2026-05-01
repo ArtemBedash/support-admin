@@ -23,7 +23,7 @@ export async function PATCH(req: Request, { params }: Params) {
     // Читаем текущее состояние диалога
     const { data: dialog } = await supabase
       .from("dialogs")
-      .select("id, assigned_to, assigned_at, last_staff_reply_at")
+      .select("id, assigned_to, assigned_at, last_staff_reply_at, telegram_chat_id")
       .eq("id", id)
       .single();
 
@@ -76,6 +76,20 @@ export async function PATCH(req: Request, { params }: Params) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Уведомляем клиента в Telegram когда сотрудник впервые берёт диалог
+    const isNewAssignment = assigned_to && !dialog.assigned_to;
+    if (isNewAssignment && dialog.telegram_chat_id) {
+      const botToken = process.env.BOT_TOKEN;
+      if (botToken) {
+        const notifyText = `С вами разговаривает ${staff.display_name} 👋`;
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: dialog.telegram_chat_id, text: notifyText }),
+        }).catch(() => {}); // не блокируем ответ если Telegram недоступен
+      }
     }
 
     return NextResponse.json({ dialog: data });

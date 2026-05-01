@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Conversation } from "../_types/conversation";
 import type { StaffProfile } from "../_types/staff";
 
@@ -18,13 +18,19 @@ function formatCell(value: string | number | null | undefined) {
 type Props = {
   conversation: Conversation | null;
   currentStaff: StaffProfile;
+  assignedToName?: string | null;
   onMessageSent?: (dialogId: string) => void;
 };
 
-export function ConversationMessages({ conversation, currentStaff, onMessageSent }: Props) {
+export function ConversationMessages({ conversation, currentStaff, assignedToName, onMessageSent }: Props) {
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "instant" });
+  }, [conversation?.dialogId, conversation?.messages.length]);
 
   if (!conversation) {
     return <div className="p-5 text-sm text-[var(--muted)]">Нет диалогов.</div>;
@@ -72,7 +78,9 @@ export function ConversationMessages({ conversation, currentStaff, onMessageSent
 
       <div className="max-h-[60vh] space-y-2 overflow-auto p-3 sm:p-4">
         {conversation.messages.map((message) => {
-          const isUser = (message.role ?? "user") === "user";
+          const role = message.role ?? "user";
+          const isUser = role === "user";
+          const roleLabel = role === "user" ? "Клиент" : role === "bot" ? "Бот" : "Менеджер";
           return (
             <div key={message.id} style={{ display: "flex", justifyContent: isUser ? "flex-start" : "flex-end" }}>
               <div
@@ -81,18 +89,27 @@ export function ConversationMessages({ conversation, currentStaff, onMessageSent
                   border: "1px solid var(--line)",
                   background: isUser
                     ? "var(--surface-soft)"
+                    : role === "bot"
+                    ? "color-mix(in oklab, #6366f1 12%, var(--surface-soft) 88%)"
                     : "color-mix(in oklab, var(--accent) 15%, var(--surface-soft) 85%)",
                 }}
               >
                 <p className="mb-1 text-xs uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>
-                  {message.role ?? "user"} · {formatDate(message.created_at)}
+                  {roleLabel} · {formatDate(message.created_at)}
                 </p>
                 <p className="whitespace-pre-wrap text-sm leading-6">{formatCell(message.text)}</p>
               </div>
             </div>
           );
         })}
+        <div ref={bottomRef} />
       </div>
+
+      {!canReply && conversation.assignedTo && (
+        <div className="border-t border-[var(--line)] px-4 py-3 text-xs text-[var(--muted)]">
+          Диалог ведёт: <span className="font-semibold text-[var(--text)]">{assignedToName ?? "другой сотрудник"}</span>
+        </div>
+      )}
 
       {canReply && (
         <form
