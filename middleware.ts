@@ -48,7 +48,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Если пользователь не залогинен и пытается открыть защищённую страницу — на /login.
-  const publicPaths = ["/login", "/forgot-password", "/reset-password", "/auth/confirm", "/register"];
+  // /api/register тоже публичный: будущий сотрудник ещё не имеет сессии,
+  // но должен иметь возможность завершить регистрацию по invite code.
+  const publicPaths = ["/login", "/forgot-password", "/reset-password", "/auth/confirm", "/register", "/api/register"];
   if (!user && !publicPaths.includes(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
