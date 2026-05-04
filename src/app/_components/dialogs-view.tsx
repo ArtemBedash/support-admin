@@ -110,21 +110,21 @@ export function DialogsView({ messages, selectedChatId, onSelectChat, onAssignCh
     filteredConversations.find((c) => c.chatId === selectedChatId) ?? null;
 
   async function assignTo(dialogId: string, userId: string) {
-    await fetch(`/api/dialogs/${dialogId}/assign`, {
+    const res = await fetch(`/api/dialogs/${dialogId}/assign`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assigned_to: userId }),
     });
-    onAssignChange(dialogId, userId);
+    if (res.ok) onAssignChange(dialogId, userId);
   }
 
   async function unassign(dialogId: string) {
-    await fetch(`/api/dialogs/${dialogId}/assign`, {
+    const res = await fetch(`/api/dialogs/${dialogId}/assign`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assigned_to: null }),
     });
-    onAssignChange(dialogId, null);
+    if (res.ok) onAssignChange(dialogId, null);
   }
 
   return (
