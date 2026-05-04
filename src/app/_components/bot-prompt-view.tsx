@@ -16,8 +16,8 @@ export function BotPromptView() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [activating, setActivating] = useState<string | null>(null);
 
-  async function loadVersions() {
-    setLoading(true);
+  async function loadVersions(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch("/api/bot-prompt");
       const json = await res.json();
@@ -26,7 +26,7 @@ export function BotPromptView() {
     } catch {
       setError("Не удалось загрузить версии.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -67,7 +67,7 @@ export function BotPromptView() {
       });
       const json = await res.json();
       if (!res.ok) { setSaveError(json.error); return; }
-      await loadVersions();
+      await loadVersions(true);
       resetEditor();
     } catch {
       setSaveError("Не удалось сохранить версию.");
@@ -80,7 +80,7 @@ export function BotPromptView() {
     setActivating(id);
     try {
       const res = await fetch(`/api/bot-prompt/${id}/activate`, { method: "POST" });
-      if (res.ok) await loadVersions();
+      if (res.ok) await loadVersions(true);
     } finally {
       setActivating(null);
     }
