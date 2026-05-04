@@ -102,6 +102,29 @@ export async function PATCH(req: Request, { params }: Params) {
       }
     }
 
+    // Уведомляем клиента при снятии назначения
+    const isUnassignment = !assigned_to && dialog.assigned_to;
+    if (isUnassignment && dialog.telegram_chat_id) {
+      const botToken = process.env.BOT_TOKEN;
+      if (botToken) {
+        const { data: prev } = await supabase
+          .from("staff_profiles")
+          .select("display_name")
+          .eq("user_id", dialog.assigned_to)
+          .single();
+        if (prev) {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: dialog.telegram_chat_id,
+              text: `Менеджер ${prev.display_name} отключился. Бот снова на связи 🤖`,
+            }),
+          }).catch(() => {});
+        }
+      }
+    }
+
     return NextResponse.json({ dialog: data });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
