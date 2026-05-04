@@ -83,7 +83,17 @@ export async function PATCH(req: Request, { params }: Params) {
     if (isNewAssignment && dialog.telegram_chat_id) {
       const botToken = process.env.BOT_TOKEN;
       if (botToken) {
-        const notifyText = `С вами разговаривает ${staff.display_name} 👋`;
+        // Берём имя назначенного сотрудника, а не того кто делает запрос
+        let assigneeName = staff.display_name;
+        if (assigned_to !== staff.user_id) {
+          const { data: assignee } = await supabase
+            .from("staff_profiles")
+            .select("display_name")
+            .eq("user_id", assigned_to)
+            .single();
+          if (assignee) assigneeName = assignee.display_name;
+        }
+        const notifyText = `С вами разговаривает ${assigneeName} 👋`;
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
