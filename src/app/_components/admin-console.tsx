@@ -33,7 +33,7 @@ export function AdminConsole({ messages, initialError, currentStaff, staffList }
   useEffect(() => {
     const supabase = createSupabaseClient();
     const channel = supabase
-      .channel("messages:new")
+      .channel("realtime:messages-and-dialogs")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
@@ -50,6 +50,20 @@ export function AdminConsole({ messages, initialError, currentStaff, staffList }
           if (data) {
             setLiveMessages((prev) => [data as unknown as Message, ...prev]);
           }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "dialogs" },
+        (payload) => {
+          const updated = payload.new as { id: string; assigned_to: string | null };
+          setLiveMessages((prev) =>
+            prev.map((m) =>
+              m.dialog.id === updated.id
+                ? { ...m, dialog: { ...m.dialog, assigned_to: updated.assigned_to } }
+                : m
+            )
+          );
         }
       )
       .subscribe();

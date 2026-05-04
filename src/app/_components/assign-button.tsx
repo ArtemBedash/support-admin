@@ -63,13 +63,15 @@ export function AssignButton({ assignedTo, assignedToName, currentStaff, staffLi
       <span className="text-xs text-[var(--muted)]">
         {assignedToName ?? "Назначен"}
       </span>
-      <button
-        type="button"
-        onClick={() => onAssignTo(currentStaff.user_id)}
-        className="text-xs text-[var(--accent)] hover:underline"
-      >
-        Взять на себя
-      </button>
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={() => onAssignTo(currentStaff.user_id)}
+          className="text-xs text-[var(--accent)] hover:underline"
+        >
+          Взять на себя
+        </button>
+      )}
       {isAdmin && (
         <>
           <button
