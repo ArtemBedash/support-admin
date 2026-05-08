@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
 
   if (!code) {
     // Нет code — ссылка некорректная, идём на логин.
@@ -22,6 +24,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Сессия установлена в cookies — теперь пользователь залогинен.
-  // Редиректим на страницу с формой нового пароля.
-  return NextResponse.redirect(`${origin}/reset-password`);
+  // next различает сценарии: registration confirmation ведёт в приложение,
+  // password reset ведёт на страницу нового пароля.
+  return NextResponse.redirect(`${origin}${safeNext}`);
 }

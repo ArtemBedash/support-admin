@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { StaffInvite, StaffRole } from "../_types/staff";
+import type { StaffInvite, StaffRole } from "../../_types/staff";
 
 type StaffEntry = {
   user_id: string;

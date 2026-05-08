@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { BotPromptVersion } from "../_types/staff";
+import type { BotPromptVersion } from "../../_types/staff";
 
 export function BotPromptView() {
   const [versions, setVersions] = useState<BotPromptVersion[]>([]);

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Message } from "../_types/message";
-import type { Conversation } from "../_types/conversation";
-import type { StaffProfile, StaffRole } from "../_types/staff";
+import type { Message } from "../../_types/message";
+import type { Conversation } from "../../_types/conversation";
+import type { StaffProfile, StaffRole } from "../../_types/staff";
 import { ConversationList } from "./conversation-list";
 import { ConversationMessages } from "./conversation-messages";
 

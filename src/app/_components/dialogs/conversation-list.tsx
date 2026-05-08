@@ -1,8 +1,8 @@
 "use client";
 
 import { AssignButton } from "./assign-button";
-import type { Conversation } from "../_types/conversation";
-import type { StaffProfile, StaffRole } from "../_types/staff";
+import type { Conversation } from "../../_types/conversation";
+import type { StaffProfile, StaffRole } from "../../_types/staff";
 
 type DialogPeriod = "all" | "24h" | "7d" | "30d";
 type StaffOption = { user_id: string; display_name: string; role: StaffRole };

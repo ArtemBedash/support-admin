@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AiChatWidget } from "./ai-chat-widget";
-import { DialogsView } from "./dialogs-view";
-import { SemanticSearchView } from "./semantic-search-view";
-import { BotPromptView } from "./bot-prompt-view";
-import { KnowledgeBaseView } from "./knowledge-base-view";
-import { StaffView } from "./staff-view";
+import { AiChatWidget } from "../search/ai-chat-widget";
+import { DialogsView } from "../dialogs/dialogs-view";
+import { SemanticSearchView } from "../search/semantic-search-view";
+import { BotPromptView } from "../bot-prompt/bot-prompt-view";
+import { KnowledgeBaseView } from "../knowledge-base/knowledge-base-view";
+import { StaffView } from "../staff/staff-view";
 import { Sidebar } from "./sidebar";
-import { useTheme } from "../_hooks/use-theme";
+import { useTheme } from "../../_hooks/use-theme";
 import { createClient as createSupabaseClient } from "@/lib/supabase";
-import type { Message } from "../_types/message";
-import type { StaffProfile } from "../_types/staff";
+import type { Message } from "../../_types/message";
+import type { StaffProfile } from "../../_types/staff";
 
 type View = "dialogs" | "search" | "bot-prompt" | "knowledge-base" | "staff";
 

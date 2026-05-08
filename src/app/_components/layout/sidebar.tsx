@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { SignOutButton } from "./sign-out-button";
-import type { StaffProfile, StaffRole } from "../_types/staff";
+import type { StaffProfile, StaffRole } from "../../_types/staff";
 
 type View = "dialogs" | "search" | "bot-prompt" | "knowledge-base" | "staff";
 

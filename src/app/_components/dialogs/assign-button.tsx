@@ -1,6 +1,6 @@
 "use client";
 
-import type { StaffProfile, StaffRole } from "../_types/staff";
+import type { StaffProfile, StaffRole } from "../../_types/staff";
 
 type StaffOption = { user_id: string; display_name: string; role: StaffRole };
 

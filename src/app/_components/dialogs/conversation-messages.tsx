@@ -1,8 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import type { Conversation } from "../_types/conversation";
-import type { StaffProfile } from "../_types/staff";
+import type { Conversation } from "../../_types/conversation";
+import type { StaffProfile } from "../../_types/staff";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();

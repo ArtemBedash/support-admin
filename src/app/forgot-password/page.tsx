@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       // После перехода по ссылке из письма — Supabase редиректит сюда.
       // Здесь пользователь сможет ввести новый пароль.
-      redirectTo: `${window.location.origin}/auth/confirm`,
+      redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
     });
 
     if (error) {

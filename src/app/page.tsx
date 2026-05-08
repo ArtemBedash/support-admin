@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { getCurrentStaff } from "@/lib/staff";
-import { AdminConsole } from "./_components/admin-console";
+import { AdminConsole } from "./_components/layout/admin-console";
 import type { Message } from "./_types/message";
 
 export const dynamic = "force-dynamic";
